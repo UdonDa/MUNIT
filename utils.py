@@ -72,7 +72,7 @@ def get_data_loader_list(root, file_list, batch_size, train, new_size=256,
     transform_list = [transforms.ToTensor(),
                       transforms.Normalize((0.5, 0.5, 0.5),
                                            (0.5, 0.5, 0.5))]
-    transform_list = [transforms.Resize(new_size),
+    transform_list = [transforms.Scale(new_size),
                       transforms.RandomCrop((height, width))] + transform_list if crop else transform_list
     transform_list = [transforms.RandomHorizontalFlip()] + transform_list if train else transform_list
     transform = transforms.Compose(transform_list)
@@ -85,7 +85,7 @@ def get_data_loader_folder(input_folder, batch_size, train, new_size=256,
     transform_list = [transforms.ToTensor(),
                       transforms.Normalize((0.5, 0.5, 0.5),
                                            (0.5, 0.5, 0.5))]
-    transform_list = [transforms.Resize(new_size),
+    transform_list = [transforms.Scale(new_size),
                       transforms.RandomCrop((height, width))] + transform_list if crop else transform_list
     transform_list = [transforms.RandomHorizontalFlip()] + transform_list if train else transform_list
     transform = transforms.Compose(transform_list)

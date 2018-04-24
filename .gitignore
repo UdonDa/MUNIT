@@ -6,6 +6,7 @@ logs/
 dgx/scripts/
 .ipynb_checkpoints/
 src/*jpg
+*.jpg
 notebooks/.ipynb_checkpoints/*
 exps/
 src/yaml_generator.py
