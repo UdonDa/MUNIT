@@ -13,10 +13,15 @@ except ImportError: # will be 3.x series
 from trainer import MUNIT_Trainer
 import torch.backends.cudnn as cudnn
 import torch
+import torch.nn as nn
 import os
 import sys
 import tensorboardX
 import shutil
+# Multiple gpu setting
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+
 parser = OptionParser()
 parser.add_option('--config', type=str, help="net configuration")
 parser.add_option('--output_base', type=str, default='.', help="outputs path")
@@ -25,9 +30,9 @@ parser.add_option("--resume", action="store_true")
 
 def main(argv):
     (opts, args) = parser.parse_args(argv)
-    cudnn.benchmark = True
+    #cudnn.benchmark = True
     model_name = os.path.splitext(os.path.basename(opts.config))[0]
-
+    print("===================================================================================")
     # Load experiment setting
     config = get_config(opts.config)
     max_iter = config['max_iter']
@@ -35,7 +40,12 @@ def main(argv):
 
     # Setup model and data loader
     trainer = MUNIT_Trainer(config, opts)
-    trainer.cuda()
+    if torch.cuda.device_count() > 1:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        trainer = nn.DataParallel(trainer)
+    if torch.cuda.is_available():
+        trainer.cuda()
+
     train_loader_a, train_loader_b, test_loader_a, test_loader_b = get_all_data_loaders(config)
     test_display_images_a = Variable(torch.stack([test_loader_a.dataset[i] for i in range(display_size)]).cuda(), volatile=True)
     test_display_images_b = Variable(torch.stack([test_loader_b.dataset[i] for i in range(display_size)]).cuda(), volatile=True)
@@ -49,15 +59,15 @@ def main(argv):
     shutil.copy(opts.config, os.path.join(output_directory, 'config.yaml')) # copy config file to output folder
 
     # Start training
-    iterations = trainer.resume(checkpoint_directory, hyperparameters=config) if opts.resume else 0
+    iterations = trainer.module.resume(checkpoint_directory, hyperparameters=config) if opts.resume else 0
     while True:
         for it, (images_a, images_b) in enumerate(zip(train_loader_a, train_loader_b)):
-            trainer.update_learning_rate()
+            trainer.module.update_learning_rate()
             images_a, images_b = Variable(images_a.cuda()), Variable(images_b.cuda())
 
             # Main training code
-            trainer.dis_update(images_a, images_b, config)
-            trainer.gen_update(images_a, images_b, config)
+            trainer.module.dis_update(images_a, images_b, config)
+            trainer.module.gen_update(images_a, images_b, config)
 
             # Dump training stats in log file
             if (iterations + 1) % config['log_iter'] == 0:
@@ -67,26 +77,26 @@ def main(argv):
             # Write images
             if (iterations + 1) % config['image_save_iter'] == 0:
                 # Test set images
-                image_outputs = trainer.sample(test_display_images_a, test_display_images_b)
+                image_outputs = trainer.module.sample(test_display_images_a, test_display_images_b)
                 write_images(image_outputs[0:4], display_size, '%s/gen_a2b_test_%08d.jpg' % (image_directory, iterations + 1))
                 write_images(image_outputs[4:8], display_size, '%s/gen_b2a_test_%08d.jpg' % (image_directory, iterations + 1))
 
                 # Train set images
-                image_outputs = trainer.sample(train_display_images_a, train_display_images_b)
+                image_outputs = trainer.module.sample(train_display_images_a, train_display_images_b)
                 write_images(image_outputs[0:4], display_size, '%s/gen_a2b_train_%08d.jpg' % (image_directory, iterations + 1))
                 write_images(image_outputs[4:8], display_size, '%s/gen_b2a_train_%08d.jpg' % (image_directory, iterations + 1))
 
                 # HTML
                 write_html(output_directory + "/index.html", iterations + 1, config['image_save_iter'], 'images')
             if (iterations + 1) % config['image_save_iter'] == 0:
-                image_outputs = trainer.sample(test_display_images_a, test_display_images_b)
+                image_outputs = trainer.module.sample(test_display_images_a, test_display_images_b)
 
                 write_images(image_outputs[0:4], display_size, '%s/gen_a2b_train_current.jpg' % image_directory)
                 write_images(image_outputs[4:8], display_size, '%s/gen_b2a_train_current.jpg' % image_directory)
 
             # Save network weights
             if (iterations + 1) % config['snapshot_save_iter'] == 0:
-                trainer.save(checkpoint_directory, iterations)
+                trainer.module.save(checkpoint_directory, iterations)
 
             iterations += 1
             if iterations >= max_iter:
