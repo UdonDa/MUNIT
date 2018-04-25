@@ -10,6 +10,15 @@ python train.py --config configs/edges2handbags_folder.yaml
 ## Worried
 It doesnt work DataPrallel!!!!!!!
 
+## Info
+#### 1. data_parallel_tutorial.py
+Code of MultipleGPU running on Pythorch 0.4.0
+
+#### 2. own.py
+Code of MultipleGPU running on Pythorch 0.3.0
+
+
+In reference to these two, let's move MUNIT with MultipleGPU!!!!
 
 
 [![License CC BY-NC-SA 4.0](https://img.shields.io/badge/license-CC4.0-blue.svg)](https://raw.githubusercontent.com/NVIDIA/FastPhotoStyle/master/LICENSE.md)
