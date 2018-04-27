@@ -16,3 +16,4 @@ src/yaml_generator.py
 *.pkl
 *.pyc
 *.DS_Store
+/outputs/
